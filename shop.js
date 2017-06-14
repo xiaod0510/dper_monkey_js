@@ -71,7 +71,7 @@
             oldShops=shops;
         }
         searchBtn.click();
-        setTimeout(autoReSearch,refreshSeconds*1000);
+        setTimeout(autoReSearch,refreshSeconds*(Math.random()*200+800));
     }
     setTimeout(init,5000);
 })();

@@ -198,7 +198,7 @@
 
     var settingHtml="\
         <div id='stPanel' style='position: fixed;top:200px;right:10%;'>\
-            <audio id='stMusic' autoplay='autoplay'></audio>\
+            <audio id='stMusic'></audio>\
             <button id='stBtn' class='eg eg-sm eg-btn eg-btn-sm' style='float:right;'>?</button>\
             <table style='display:none;background-color: #ee5511;float:right;' id='stTable'>\
                 <tr>\
@@ -235,7 +235,6 @@
             this.stStart=$("stStart");
             this.stBtn=$("stBtn");
             this.stMusic=$("stMusic");
-
             this.stLimit=$("stLimit");
             this.stTimes=$("stTimes");
             this.stImport=$("stImport");
@@ -246,6 +245,7 @@
                 stImport:(this.stImport.checked=="checked"||this.stImport.checked==true),
                 stMusicUrl:this.stMusicUrl.value
             };
+            this.stMusic.src=this.conf.stMusicUrl;
 
             this.stBtn.onclick=function(){
                 self.toggle();
@@ -270,6 +270,7 @@
             };
             this.stMusicUrl.onchange=function(){
                 self.conf.stMusicUrl=this.value;
+                self.stMusic.src=this.value;
             };
         };
         this.toggle=function(){
@@ -281,7 +282,6 @@
             }
         };
         this.notify=function(){
-            self.stMusic.src=(self.conf.stMusicUrl + "?tm=" + new Date().getTime());
             self.stMusic.play();
         };
         return this;

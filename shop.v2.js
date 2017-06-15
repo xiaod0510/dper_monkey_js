@@ -211,11 +211,11 @@
                 </tr>\
                 <tr>\
                     <td>刷新间隔(毫秒)</td>\
-                    <td><input id='stLimit' type='text' value='800'></td>\
+                    <td><input id='stLimit' type='text' value='400'></td>\
                 </tr>\
                 <tr>\
                     <td>刷新次数</td>\
-                    <td><input id='stTimes' type='text' value='500'></td>\
+                    <td><input id='stTimes' type='text' value='135'></td>\
                 </tr>\
                 <tr>\
                     <td>背景音乐</td>\

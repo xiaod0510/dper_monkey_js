@@ -117,7 +117,7 @@
                 this.loop=0;
                 return;
             }
-            sUI.stTimes=this.loop;
+            sUI.stTimes.value=this.loop;
             //获取店铺Id
             var shops = findShopId();
             //校验是否有新店铺
@@ -152,7 +152,6 @@
             for(var i=0;i!=spans.length;i++){
                 var sp=spans[i];
                 if(sp && sp.hasAttribute("data-reactid")){
-                    debugger;
                     var reactid=sp.attributes["data-reactid"].value;
                     if(reactid!=null&&reactid.indexOf("$"+shopId)>=0){
                         sp.click();
@@ -204,19 +203,19 @@
             <table style='display:none;background-color: #ee5511;float:right;' id='stTable'>\
                 <tr>\
                     <td>开始</td>\
-                    <td><input id='stStart' type='checkbox'></td>\
-                </tr>\
-                <tr>\
-                    <td>间隔(毫秒)</td>\
-                    <td><input id='stLimit' type='text' value='800'></td>\
-                </tr>\
-                <tr>\
-                    <td>次数</td>\
-                    <td><input id='stTimes' type='text' value='500'></td>\
+                    <td><input id='stStart' type='checkbox'><lable for='stStart'>&nbsp;&nbsp;</lable></td>\
                 </tr>\
                 <tr>\
                     <td>自动导入</td>\
-                    <td><input id='stImport' type='checkbox'></td>\
+                    <td><input id='stImport' type='checkbox'><lable for='stImport'>&nbsp;&nbsp;</lable></td>\
+                </tr>\
+                <tr>\
+                    <td>刷新间隔(毫秒)</td>\
+                    <td><input id='stLimit' type='text' value='800'></td>\
+                </tr>\
+                <tr>\
+                    <td>刷新次数</td>\
+                    <td><input id='stTimes' type='text' value='500'></td>\
                 </tr>\
                 <tr>\
                     <td>背景音乐</td>\

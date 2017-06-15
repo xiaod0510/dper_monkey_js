@@ -117,6 +117,7 @@
                 this.loop=0;
                 return;
             }
+            sUI.stTimes=this.loop;
             //获取店铺Id
             var shops = findShopId();
             //校验是否有新店铺
@@ -178,7 +179,6 @@
                 }
             }
         }
-        console.log(shops);
         return shops;
     }
 
@@ -230,7 +230,9 @@
         var self=this;
         this.conf={};
         this.init=function(){
-            document.body.innerHTML+=settingHtml;
+            var container=document.createElement("div");
+            container.innerHTML+=settingHtml;
+            document.body.appendChild(container);
             this.stStart=$("stStart");
             this.stBtn=$("stBtn");
             this.stMusic=$("stMusic");

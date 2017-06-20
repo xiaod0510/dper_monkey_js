@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      2.1
+// @version      2.2
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -158,7 +158,7 @@
             }
             $(baseSelector+":contains('导入')").click();
             logger("自动导入:"+shopName+","+shopId);
-            sUI.shopInfo(shopId,shopName);
+            sUI.shopInfo(shopId,shopName.text());
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
         build:function(loop,limit,args){
@@ -251,7 +251,7 @@
 </tr>\
 <tr>\
 <td>刷新次数</td>\
-<td><input id='stTimes' type='text' value='135'></td>\
+<td><input id='stTimes' type='text' value='150'></td>\
 </tr>\
 <tr>\
 <td>刷新延时(秒)</td>\

@@ -6,14 +6,23 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
+// @version      1.0
+// @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
+// @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
 
 (function () {
     'use strict';
-
-    var $=window.$||function(id){
-        return document.getElementById(id);
-    };
+    if(location.href.indexOf("cpublic")<0){
+        return;
+    }
+    var dbg=true;
+    function logger(msg){
+        if(dbg!==undefined&&dbg){
+            console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+msg);
+            document.title=msg;
+        }
+    }
     //事件驱动器
     var EventLoop=function(loopunit){
         /*
@@ -60,15 +69,17 @@
             this.startTime=new Date();
             this.stoped=false;
             this.run();
-
+            logger("loop started");
         };
         this.stop=function(){
             this.stoped=true;
             this.eventQueue=[];
+            logger("loop stopped");
         };
         this.reg=function(event){
             event.$pass=event.limit;
             this.eventQueue.push(event);
+            logger("loop event add :"+event.desc);
         };
         return this;
     };
@@ -76,7 +87,6 @@
     var loopTimeUnit=50;
     var loop=new EventLoop(50);
     // Your code here...
-    var searchBtn = null;
     var sUI = null;
     //ui初始化
     var initEvent={
@@ -85,25 +95,9 @@
         desc:"init UI",
         cb:function(event) {
             try {
-                if(searchBtn==null) {
-                    var btns = document.getElementsByTagName("button");
-                    for (var i = 0; i != btns.length; i++) {
-                        if (btns[i].innerText == "查询") {
-                            searchBtn = btns[i];
-                        }
-                    }
-
-                    //未找到按钮,则重试
-                    if (searchBtn == null) {
-                        this.loop++;
-                        return;
-                    }
-                }
                 sUI=new SettingUI();
                 sUI.init();
-                researchEvent.loop=parseInt(sUI.conf.stTimes);
-                researchEvent.limit=parseInt(sUI.conf.stLimit/loopTimeUnit);
-                loop.reg(researchEvent);
+                loop.reg(researchEvent.build());
             } catch (e) {
                 alert(e);
             }
@@ -112,10 +106,13 @@
     //刷新事件
     var researchEvent={
         desc:"重新搜索...",
-        cb:function researchEvent(event) {
+        cb:function(event) {
             if (!sUI.conf.stStart){
                 this.loop=0;
                 return;
+            }
+            if(this.loop<=1){
+                loop.reg(delayEvent.build());
             }
             sUI.stTimes.value=this.loop;
             //获取店铺Id
@@ -124,18 +121,24 @@
             if (oldShops.length == 0) {
                 oldShops = shops;
             } else if (oldShops[0] != shops[0]) {
-                sUI.stStart.click();
+                logger("找到新店铺");
+                //sUI.stStart.click();
                 oldShops = shops;
                 sUI.notify();
                 if(sUI.conf.stImport){
-                    importEvent.loop=1;
-                    importEvent.limit=1;
-                    importEvent.args=[oldShops[0]];
-                    loop.reg(importEvent);
+                    loop.reg(importEvent.build(1,1,[oldShops[0]]));
                 }
                 return;
             }
-            searchBtn.click();
+            logger(this.desc+sUI.stTimes.value);
+            $("button:contains('查询')").click();
+
+        },
+        build:function(){
+            var e=$.extend({},this);
+            e.loop=parseInt(sUI.conf.stTimes);
+            e.limit=parseInt(sUI.conf.stLimit/loopTimeUnit);
+            return e;
         }
     };
     /**
@@ -145,20 +148,49 @@
     var importEvent={
         loop:1,
         limit:1,
-        desc:"import data...",
+        desc:"自动导入",
         cb:function(){
             var shopId=this.args[0];
-            var spans=document.getElementsByTagName("span");
-            for(var i=0;i!=spans.length;i++){
-                var sp=spans[i];
-                if(sp && sp.hasAttribute("data-reactid")){
-                    var reactid=sp.attributes["data-reactid"].value;
-                    if(reactid!=null&&reactid.indexOf("$"+shopId)>=0){
-                        sp.click();
-                    }
-                }
+            var baseSelector="span[data-reactid*="+shopId+"]";
+            var shopName=$(baseSelector);
+            if(shopName.length==0){
+                return;
             }
+            $(baseSelector+":contains('导入')").click();
+            logger("自动导入:"+shopName+","+shopId);
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
+        },
+        build:function(loop,limit,args){
+            var e=$.extend({},this);
+            e.loop=loop;
+            e.limit=limit;
+            e.args=[oldShops[0]];
+            return e;
+        }
+    };
+    var delayEvent={
+        loop:1,
+        limit:1,
+        desc:"延时",
+        cb:function(){
+            sUI.stDelay.value=this.loop;
+            logger("倒计"+this.loop+"秒");
+            if(this.loop<=1){
+                logger("延时结束:"+this.start+"---"+new Date());
+                sUI.stTimes.value=sUI.conf.stTimes;
+                sUI.stDelay.value=sUI.conf.stDelay;
+                loop.reg(researchEvent.build());
+            }
+
+        },
+        build:function(sec){
+            var e=$.extend({},this);
+            sec=sec||parseInt(sUI.conf.stDelay);
+            e.limit=1000/loopTimeUnit;
+            e.loop=parseInt(sec);
+            e.start=new Date();
+            logger(JSON.stringify(e));
+            return e;
         }
     };
     /**
@@ -168,16 +200,19 @@
     var oldShops = [];
     function findShopId() {
         var shops = [];
-        var spanShopLb = document.getElementsByTagName("span");
-        for (var i = 0; i != spanShopLb.length; i++) {
-            var sp = spanShopLb[i];
-            if (sp.innerText.toLowerCase().indexOf("shopid") >= 0) {
-                try {
-                    shops.push(sp.nextSibling.innerText);
-                } catch (e) {
-                }
+
+        var spanShopLb = $("span:contains('导入')","body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
+        spanShopLb.each(function(n,d){
+            var reactid=$(this).attr("data-reactid");
+            if(reactid==null){
+                return;
             }
-        }
+            var mch=/\$(\d+)\./.exec(reactid);
+            if(mch==null||mch.length!=2){
+                return;
+            }
+            shops.push(mch[1]);
+        });
         return shops;
     }
 
@@ -197,51 +232,56 @@
     })();
 
     var settingHtml="\
-        <div id='stPanel' style='position: fixed;top:200px;right:10%;'>\
-            <audio id='stMusic'></audio>\
-            <button id='stBtn' class='eg eg-sm eg-btn eg-btn-sm' style='float:right;'>?</button>\
-            <table style='display:none;background-color: #ee5511;float:right;' id='stTable'>\
-                <tr>\
-                    <td>开始</td>\
-                    <td><input id='stStart' type='checkbox'><lable for='stStart'>&nbsp;&nbsp;</lable></td>\
-                </tr>\
-                <tr>\
-                    <td>自动导入</td>\
-                    <td><input id='stImport' type='checkbox'><lable for='stImport'>&nbsp;&nbsp;</lable></td>\
-                </tr>\
-                <tr>\
-                    <td>刷新间隔(毫秒)</td>\
-                    <td><input id='stLimit' type='text' value='400'></td>\
-                </tr>\
-                <tr>\
-                    <td>刷新次数</td>\
-                    <td><input id='stTimes' type='text' value='135'></td>\
-                </tr>\
-                <tr>\
-                    <td>背景音乐</td>\
-                    <td><input id='stMusicUrl' type='input' value='http://mp3.13400.com:99/1830/171204301735531.mp3'></td>\
-                </tr>\
-            </table>\
-        </div>\
-    ";
+<div id='stPanel' style='position: fixed;top:40px;right:20px;z-index:10000;'>\
+<audio id='stMusic'></audio>\
+<button id='stBtn' class='eg eg-sm eg-btn eg-btn-sm' style='float:right;'>?</button>\
+<table style='display:none;background-color: #ee5511;float:right;' id='stTable'>\
+<tr>\
+<td>开始</td>\
+<td><input id='stStart' type='checkbox'><lable for='stStart'>&nbsp;&nbsp;</lable></td>\
+</tr>\
+<tr>\
+<td>自动导入</td>\
+<td><input id='stImport' type='checkbox'><lable for='stImport'>&nbsp;&nbsp;</lable></td>\
+</tr>\
+<tr>\
+<td>刷新间隔(毫秒)</td>\
+<td><input id='stLimit' type='text' value='400'></td>\
+</tr>\
+<tr>\
+<td>刷新次数</td>\
+<td><input id='stTimes' type='text' value='135'></td>\
+</tr>\
+<tr>\
+<td>刷新延时(秒)</td>\
+<td><input id='stDelay' type='text' value='900'></td>\
+</tr>\
+<tr>\
+<td>背景音乐</td>\
+<td><input id='stMusicUrl' type='input' value='http://mp3.13400.com:99/1830/171204301735531.mp3'></td>\
+</tr>\
+</table>\
+</div>\
+";
 
     var SettingUI=function(){
         var self=this;
         this.conf={};
         this.init=function(){
-            var container=document.createElement("div");
-            container.innerHTML+=settingHtml;
-            document.body.appendChild(container);
-            this.stStart=$("stStart");
-            this.stBtn=$("stBtn");
-            this.stMusic=$("stMusic");
-            this.stLimit=$("stLimit");
-            this.stTimes=$("stTimes");
-            this.stImport=$("stImport");
-            this.stMusicUrl=$("stMusicUrl");
+            var container=$("<div>").append(settingHtml).appendTo(document.body);
+            this.stStart=$("#stStart").get(0);
+            this.stBtn=$("#stBtn").get(0);
+            this.stMusic=$("#stMusic").get(0);
+            this.stLimit=$("#stLimit").get(0);
+            this.stTimes=$("#stTimes").get(0);
+            this.stImport=$("#stImport").get(0);
+            this.stMusicUrl=$("#stMusicUrl").get(0);
+            this.stDelay=$("#stDelay").get(0);
+
             this.conf={
                 stLimit:this.stLimit.value,
                 stTimes:this.stTimes.value,
+                stDelay:this.stDelay.value,
                 stImport:(this.stImport.checked=="checked"||this.stImport.checked==true),
                 stMusicUrl:this.stMusicUrl.value
             };
@@ -253,11 +293,12 @@
             this.stStart.onclick=function(){
                 self.conf.stStart=this.checked;
                 if (this.checked) {
-                    researchEvent.loop=parseInt(sUI.conf.stTimes);
-                    researchEvent.limit=parseInt(sUI.conf.stLimit/loopTimeUnit);
-                    loop.reg(researchEvent);
+                    loop.reg(researchEvent.build());
                 }
                 self.toggle();
+            };
+            this.stDelay.onchange=function(){
+                self.conf.stDelay=this.value;
             };
             this.stLimit.onchange=function(){
                 self.conf.stLimit=this.value;
@@ -272,9 +313,10 @@
                 self.conf.stMusicUrl=this.value;
                 self.stMusic.src=this.value;
             };
+            console.dir("conf:"+JSON.stringify(this.conf));
         };
         this.toggle=function(){
-            var stTable=$("stTable");
+            var stTable=$("#stTable").get(0);
             if(stTable.style.display==="block"){
                 stTable.style.display="none";
             }else{

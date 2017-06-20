@@ -66,6 +66,7 @@
             }, this.loopunit);
         };
         this.start=function(){
+            $(".stShopInfo").remove();
             this.startTime=new Date();
             this.stoped=false;
             this.run();
@@ -317,7 +318,7 @@
                 self.stMusic.src=this.value;
             };
             this.shopInfo=function(id,name){
-                $("#stPanel").append(id+" : "+name+"<br/>");
+                $("#stPanel").append("<div class='stShopInfo'>"+id+" : "+name+"</div>");
             }
             console.dir("conf:"+JSON.stringify(this.conf));
         };

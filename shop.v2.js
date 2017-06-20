@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      1.0
+// @version      2.0
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -293,7 +293,9 @@
             this.stStart.onclick=function(){
                 self.conf.stStart=this.checked;
                 if (this.checked) {
+                    loop.stop();
                     loop.reg(researchEvent.build());
+                    loop.start();
                 }
                 self.toggle();
             };

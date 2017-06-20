@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      2.0
+// @version      2.1
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -158,6 +158,7 @@
             }
             $(baseSelector+":contains('导入')").click();
             logger("自动导入:"+shopName+","+shopId);
+            sUI.shopInfo(shopId,shopName);
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
         build:function(loop,limit,args){
@@ -315,6 +316,9 @@
                 self.conf.stMusicUrl=this.value;
                 self.stMusic.src=this.value;
             };
+            this.shopInfo=function(id,name){
+                $("#stPanel").append(id+" : "+name+"<br/>");
+            }
             console.dir("conf:"+JSON.stringify(this.conf));
         };
         this.toggle=function(){

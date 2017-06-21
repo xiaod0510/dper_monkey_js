@@ -59,22 +59,23 @@
                     this.eventQueue.push(event);
                 }
             }
-            //通过setTimeout实现事件循环
-            var self=this;
-            setTimeout(function(){
-                self.run();
-            }, this.loopunit);
         };
         this.start=function(){
             $(".stShopInfo").remove();
             this.startTime=new Date();
             this.stoped=false;
             this.run();
+            //通过setInterval实现事件循环
+            var self=this;
+            this.interval=setInterval(function(){
+                self.run();
+            },this.loopunit);
             logger("loop started");
         };
         this.stop=function(){
             this.stoped=true;
             this.eventQueue=[];
+            clearInterval(this.interval);
             logger("loop stopped");
         };
         this.reg=function(event){
@@ -85,7 +86,6 @@
         return this;
     };
 
-    var loopTimeUnit=50;
     var loop=new EventLoop(50);
     // Your code here...
     var sUI = null;
@@ -138,7 +138,7 @@
         build:function(){
             var e=$.extend({},this);
             e.loop=parseInt(sUI.conf.stTimes);
-            e.limit=parseInt(sUI.conf.stLimit/loopTimeUnit);
+            e.limit=parseInt(sUI.conf.stLimit/loop.loopunit);
             return e;
         }
     };
@@ -188,7 +188,7 @@
         build:function(sec){
             var e=$.extend({},this);
             sec=sec||parseInt(sUI.conf.stDelay);
-            e.limit=1000/loopTimeUnit;
+            e.limit=1000/loop.loopunit;
             e.loop=parseInt(sec);
             e.start=new Date();
             logger(JSON.stringify(e));
@@ -217,10 +217,6 @@
         });
         return shops;
     }
-
-    loop.reg(initEvent);
-    loop.start();
-
 
     //mock error
     (function(){
@@ -321,7 +317,7 @@
             };
             this.shopInfo=function(id,name){
                 $("#stPanel").append("<div class='stShopInfo'>"+id+" : "+name+"</div>");
-            }
+            };
             console.dir("conf:"+JSON.stringify(this.conf));
         };
         this.toggle=function(){
@@ -337,4 +333,8 @@
         };
         return this;
     };
+
+    loop.reg(initEvent);
+    loop.start();
+
 })();

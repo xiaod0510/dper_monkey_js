@@ -228,6 +228,8 @@
         Promise.reject=function(){
             if(arguments.length==1&&arguments[0].message=="您访问过于频繁，请稍后访问！"){
                 loop.stop();
+                loop.push(delayEvent.build());
+                loop.start();
             }
             return Promise.$$reject.call(this,arguments[0]);
         };

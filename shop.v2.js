@@ -86,9 +86,6 @@
         return this;
     };
 
-    var loop=new EventLoop(50);
-    // Your code here...
-    var sUI = null;
     //ui初始化
     var initEvent={
         loop:1,
@@ -96,8 +93,6 @@
         desc:"init UI",
         cb:function(event) {
             try {
-                sUI=new SettingUI();
-                sUI.init();
                 loop.reg(researchEvent.build());
             } catch (e) {
                 alert(e);
@@ -153,7 +148,7 @@
         cb:function(){
             var shopId=this.args[0];
             var baseSelector="span[data-reactid*="+shopId+"]";
-            var shopName=$(baseSelector);
+            var shopName=$(baseSelector).first();
             if(shopName.length==0){
                 return;
             }
@@ -224,7 +219,7 @@
         Promise.reject=function(){
             if(arguments.length==1&&arguments[0].message=="您访问过于频繁，请稍后访问！"){
                 loop.stop();
-                loop.push(delayEvent.build());
+                loop.reg(delayEvent.build());
                 loop.start();
             }
             return Promise.$$reject.call(this,arguments[0]);
@@ -334,6 +329,10 @@
         return this;
     };
 
+    // Your code here...
+    var sUI = new SettingUI();
+    sUI.init();
+    var loop=new EventLoop(50);
     loop.reg(initEvent);
     loop.start();
 

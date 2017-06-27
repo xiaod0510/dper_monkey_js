@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      2.4
+// @version      2.2
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -110,6 +110,8 @@
             if(this.loop<=1){
                 loop.reg(delayEvent.build());
             }
+
+            $("body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4) > div").find("div[class^=container]").each(function(n,d){if($("span:contains(冻结中)",d).length!=0){$(d).hide();}});
             sUI.stTimes.value=this.loop;
             //获取店铺Id
             var shops = findShopId();
@@ -122,7 +124,12 @@
                 oldShops = shops;
                 sUI.notify();
                 if(sUI.conf.stImport){
-                    loop.reg(importEvent.build(1,1,[oldShops[0]]));
+                    for(var i=0;i!=shops.length;i++){
+                        if(shops[i]==oldShops[0]){
+                            break;
+                        }
+                        loop.reg(importEvent.build(1,1,[shops[i]]));
+                    }
                 }
                 return;
             }
@@ -197,7 +204,6 @@
     var oldShops = [];
     function findShopId() {
         var shops = [];
-
         var spanShopLb = $("span:contains('导入')","body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
         spanShopLb.each(function(n,d){
             var reactid=$(this).attr("data-reactid");
@@ -219,7 +225,7 @@
         Promise.reject=function(){
             if(arguments.length==1&&arguments[0].message=="您访问过于频繁，请稍后访问！"){
                 loop.stop();
-                loop.reg(delayEvent.build());
+                loop.reg(delayEvent.build(60*3));
                 loop.start();
             }
             return Promise.$$reject.call(this,arguments[0]);
@@ -241,11 +247,11 @@
 </tr>\
 <tr>\
 <td>刷新间隔(毫秒)</td>\
-<td><input id='stLimit' type='text' value='400'></td>\
+<td><input id='stLimit' type='text' value='500'></td>\
 </tr>\
 <tr>\
 <td>刷新次数</td>\
-<td><input id='stTimes' type='text' value='150'></td>\
+<td><input id='stTimes' type='text' value='130'></td>\
 </tr>\
 <tr>\
 <td>刷新延时(秒)</td>\

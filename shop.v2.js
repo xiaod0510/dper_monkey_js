@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      2.3
+// @version      2.6
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==

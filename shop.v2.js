@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        none
-// @version      2.6
+// @version      2.7
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -67,9 +67,9 @@
             this.run();
             //通过setInterval实现事件循环
             var self=this;
-            this.interval=setInterval(function(){
+            self.interval=setInterval(function(){
                 self.run();
-            },this.loopunit);
+            },self.loopunit);
             logger("loop started");
         };
         this.stop=function(){

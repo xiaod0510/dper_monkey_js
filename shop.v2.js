@@ -228,6 +228,9 @@
                 loop.reg(delayEvent.build(60*3));
                 loop.start();
             }
+            setTimeout(function(){
+                $("div:contains(您访问过于频繁，请稍后访问！)").last().prev().click();
+            },2500);
             return Promise.$$reject.call(this,arguments[0]);
         };
     })();
@@ -294,9 +297,10 @@
             this.stStart.onclick=function(){
                 self.conf.stStart=this.checked;
                 if (this.checked) {
-                    loop.stop();
                     loop.reg(researchEvent.build());
                     loop.start();
+                }else{
+                    loop.stop();
                 }
                 self.toggle();
             };

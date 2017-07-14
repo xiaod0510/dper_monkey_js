@@ -64,18 +64,19 @@
             $(".stShopInfo").remove();
             this.startTime=new Date();
             this.stoped=false;
-            this.run();
             //通过setInterval实现事件循环
             var self=this;
-            self.interval=setInterval(function(){
-                self.run();
-            },self.loopunit);
+            if(self.interval==null){
+                self.interval=setInterval(function(){
+                    self.run();
+                },self.loopunit);
+            }
             logger("loop started");
         };
         this.stop=function(){
             this.stoped=true;
             this.eventQueue=[];
-            clearInterval(this.interval);
+            //clearInterval(this.interval);
             logger("loop stopped");
         };
         this.reg=function(event){

@@ -2,12 +2,11 @@
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://tampermonkey.net/
-// @version      0.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        GM_notification
-// @version      2.7
+// @version      2.8
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==

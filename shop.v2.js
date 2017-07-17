@@ -1,10 +1,12 @@
+
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://tampermonkey.net/
+// @version      0.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
-// @grant        none
+// @grant        GM_notification
 // @version      2.7
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
@@ -162,6 +164,16 @@
             $(baseSelector+":contains('导入')").click();
             logger("自动导入:"+shopName+","+shopId);
             sUI.shopInfo(shopId,shopName.text());
+            GM_notification({
+                title:"成功导入",
+                text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
+                highlight:true,
+                timeout:0,
+                image:"https://a.dper.com/menus/static/img/logo.png",
+                onclick:function(){
+                    window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
+                }
+            });
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
         build:function(loop,limit,args){
@@ -286,7 +298,7 @@
                 stLimit:this.stLimit.value,
                 stTimes:this.stTimes.value,
                 stDelay:this.stDelay.value,
-                stImport:(this.stImport.checked=="checked"||this.stImport.checked==true),
+                stImport:(this.stImport.checked=="checked"||this.stImport.checked===true),
                 stMusicUrl:this.stMusicUrl.value
             };
             this.stMusic.src=this.conf.stMusicUrl;
@@ -314,7 +326,7 @@
                 self.conf.stTimes=this.value;
             };
             this.stImport.onchange=function(){
-                self.conf.stImport=(this.checked=="checked"||this.checked==true);
+                self.conf.stImport=(this.checked=="checked"||this.checked===true);
             };
             this.stMusicUrl.onchange=function(){
                 self.conf.stMusicUrl=this.value;

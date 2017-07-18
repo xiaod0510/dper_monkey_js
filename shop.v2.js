@@ -5,6 +5,7 @@
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
+// @grant        window
 // @grant        GM_notification
 // @version      2.8
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
@@ -254,8 +255,10 @@
                 loop.reg(delayEvent.build(60*3));
                 loop.start();
             }
-            window.dialogCloseSelector=$("div:contains("+arguments[0].message+")").last().prev();
-            setTimeout(new Function("window.dialogCloseSelector.click();"),2500);
+
+            setTimeout(function(){
+                document.querySelector("body > div:nth-child(5) > div > div > div:nth-child(1)").click();
+            },2500);
             return Promise.$$reject.call(this,arguments[0]);
         };
         Array.prototype.minus = function (arr) {

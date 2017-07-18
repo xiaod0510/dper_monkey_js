@@ -1,7 +1,7 @@
-
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://tampermonkey.net/
+// @version      0.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
@@ -19,7 +19,8 @@
     var dbg=true;
     function logger(msg){
         if(dbg!==undefined&&dbg){
-            console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+msg);
+            if(msg.indexOf('倒计')<0)
+                console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+msg);
             document.title=msg;
         }
     }
@@ -103,7 +104,7 @@
     //刷新事件
     var researchEvent={
         desc:"重新搜索...",
-        cb:function(event) {
+        cb:function() {
             if (!sUI.conf.stStart){
                 this.loop=0;
                 return;
@@ -111,28 +112,38 @@
             if(this.loop<=1){
                 loop.reg(delayEvent.build());
             }
+            if(new Date().getHours()==21){
+                loop.stop();
+            }
 
             $("body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4) > div").find("div[class^=container]").each(function(n,d){if($("span:contains(冻结中)",d).length!=0){$(d).hide();}});
             sUI.stTimes.value=this.loop;
+            var isLoading=$("div:contains('加载中...')").parent().parent().parent().parent().last();
+            if(isLoading.css("display")!="none"){
+                this.loop++;
+                return;
+            }
             //获取店铺Id
             var shops = findShopId();
             //校验是否有新店铺
-            if (oldShops.length == 0) {
+            if (oldShops.length === 0) {
                 oldShops = shops;
-            } else if (oldShops[0] != shops[0]) {
-                logger("找到新店铺");
-                //sUI.stStart.click();
-                oldShops = shops;
-                sUI.notify();
-                if(sUI.conf.stImport){
-                    for(var i=0;i!=shops.length;i++){
-                        if(shops[i]==oldShops[0]){
-                            break;
+            } else {
+                var minus=shops.minus(oldShops);
+                if(minus.length!==0){
+                    logger("找到新店铺");
+                    //sUI.stStart.click();
+                    sUI.notify();
+                    if(sUI.conf.stImport){
+                        for(var i=0;i!=minus.length;i++){
+                            loop.eventQueue=[];
+                            loop.reg(importEvent.build(1,1,[minus[i]]));
+                            loop.reg(this);
                         }
-                        loop.reg(importEvent.build(1,1,[shops[i]]));
                     }
+                    oldShops = shops;
+                    return;
                 }
-                return;
             }
             logger(this.desc+sUI.stTimes.value);
             $("button:contains('查询')").click();
@@ -157,8 +168,8 @@
             var shopId=this.args[0];
             var baseSelector="span[data-reactid*="+shopId+"]";
             var shopName=$(baseSelector).first();
-            if(shopName.length==0){
-                return;
+            if(shopName.length===0){
+                shopName="unknow";
             }
             $(baseSelector+":contains('导入')").click();
             logger("自动导入:"+shopName+","+shopId);
@@ -179,7 +190,7 @@
             var e=$.extend({},this);
             e.loop=loop;
             e.limit=limit;
-            e.args=[oldShops[0]];
+            e.args=args;
             return e;
         }
     };
@@ -214,20 +225,24 @@
      */
     var oldShops = [];
     function findShopId() {
-        var shops = [];
+        var shops = {};
         var spanShopLb = $("span:contains('导入')","body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
         spanShopLb.each(function(n,d){
             var reactid=$(this).attr("data-reactid");
-            if(reactid==null){
+            if(reactid===null){
                 return;
             }
             var mch=/\$(\d+)\./.exec(reactid);
             if(mch==null||mch.length!=2){
                 return;
             }
-            shops.push(mch[1]);
+            shops[mch[1]+""]=0;
         });
-        return shops;
+        var result=[];
+        for(var s in shops){
+            result.push(s);
+        }
+        return result;
     }
 
     //mock error
@@ -239,10 +254,24 @@
                 loop.reg(delayEvent.build(60*3));
                 loop.start();
             }
-            setTimeout(function(){
-                $("div:contains(您访问过于频繁，请稍后访问！)").last().prev().click();
-            },2500);
+            window.dialogCloseSelector=$("div:contains("+arguments[0].message+")").last().prev();
+            setTimeout(new Function("window.dialogCloseSelector.click();"),2500);
             return Promise.$$reject.call(this,arguments[0]);
+        };
+        Array.prototype.minus = function (arr) {
+            var result = new Array();
+            var obj = {};
+            for (var i = 0; i < arr.length; i++) {
+                obj[arr[i]] = 1;
+            }
+            for (var j = 0; j < this.length; j++) {
+                if (!obj[this[j]])
+                {
+                    obj[this[j]] = 1;
+                    result.push(this[j]);
+                }
+            }
+            return result;
         };
     })();
 
@@ -356,5 +385,4 @@
     var loop=new EventLoop(50);
     loop.reg(initEvent);
     loop.start();
-
 })();

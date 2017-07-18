@@ -5,7 +5,6 @@
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
-// @grant        window
 // @grant        GM_notification
 // @version      2.8
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
@@ -251,9 +250,11 @@
         Promise.$$reject=Promise.reject;
         Promise.reject=function(){
             if(arguments.length==1&&arguments[0].message=="您访问过于频繁，请稍后访问！"){
-                loop.stop();
-                loop.reg(delayEvent.build(60*3));
-                loop.start();
+                if(sUI.conf.stStart){
+                    loop.stop();
+                    loop.reg(delayEvent.build(60*3));
+                    loop.start();
+                }
             }
 
             setTimeout(function(){
@@ -366,7 +367,6 @@
             this.shopInfo=function(id,name){
                 $("#stPanel").append("<div class='stShopInfo'>"+id+" : "+name+"</div>");
             };
-            console.dir("conf:"+JSON.stringify(this.conf));
         };
         this.toggle=function(){
             var stTable=$("#stTable").get(0);

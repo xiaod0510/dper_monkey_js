@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        GM_notification
-// @version      2.8
+// @version      2.9
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -95,6 +95,7 @@
         desc:"init UI",
         cb:function(event) {
             try {
+                sUI.stSearchCfg.click();
                 loop.reg(researchEvent.build());
             } catch (e) {
                 alert(e);
@@ -133,15 +134,18 @@
                 if(minus.length!==0){
                     logger("找到新店铺");
                     //sUI.stStart.click();
-                    sUI.notify();
+                    //sUI.notify();
                     if(sUI.conf.stImport){
                         for(var i=0;i!=minus.length;i++){
-                            loop.eventQueue=[];
-                            loop.reg(importEvent.build(1,1,[minus[i]]));
-                            loop.reg(this);
+                            //loop.eventQueue=[];
+                            //loop.reg(importEvent.build(1,1,[minus[i]]));
+                            //直接点击导入
+                            var ime=importEvent.build(1,1,[minus[i]]);
+                            ime.cb();
                         }
                     }
                     oldShops = shops;
+                    loop.reg(this);
                     return;
                 }
             }
@@ -167,13 +171,28 @@
         cb:function(){
             var shopId=this.args[0];
             var baseSelector="span[data-reactid*="+shopId+"]";
-            var shopName=$(baseSelector).first();
+            var shopName=$(baseSelector).first().text();
             if(shopName.length===0){
                 shopName="unknow";
             }
-            $(baseSelector+":contains('导入')").click();
+            var importBtn=$(baseSelector+":contains('导入')");
+            var $importBtn=[];
+            importBtn.each(function(n,d){
+                if($(this).text()=="导入"){
+                    $importBtn=$(this);
+                }
+            });
+            if($importBtn.length===0){
+                return;
+            }
+            var assNewer = importBtn.parent().parent().last().prev();
+            console.log("assNewer:"+assNewer.text());
+            if(assNewer.text().indexOf("变更为")>0){
+                return;
+            }
+            importBtn.click();
             logger("自动导入:"+shopName+","+shopId);
-            sUI.shopInfo(shopId,shopName.text());
+            sUI.shopInfo(shopId,shopName);
             GM_notification({
                 title:"成功导入",
                 text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
@@ -184,6 +203,7 @@
                     window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
                 }
             });
+            sUI.notify();
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
         build:function(loop,limit,args){
@@ -293,6 +313,10 @@
 <td><input id='stImport' type='checkbox'><lable for='stImport'>&nbsp;&nbsp;</lable></td>\
 </tr>\
 <tr>\
+<td>丽人默认搜索条件</td>\
+<td><input id='stSearchCfg' type='button' value='重置'></input></td>\
+</tr>\
+<tr>\
 <td>刷新间隔(毫秒)</td>\
 <td><input id='stLimit' type='text' value='500'></td>\
 </tr>\
@@ -312,6 +336,7 @@
 </div>\
 ";
 
+
     var SettingUI=function(){
         var self=this;
         this.conf={};
@@ -325,7 +350,7 @@
             this.stImport=$("#stImport").get(0);
             this.stMusicUrl=$("#stMusicUrl").get(0);
             this.stDelay=$("#stDelay").get(0);
-
+            this.stSearchCfg=$("#stSearchCfg").get(0);
             this.conf={
                 stLimit:this.stLimit.value,
                 stTimes:this.stTimes.value,
@@ -333,8 +358,36 @@
                 stImport:(this.stImport.checked=="checked"||this.stImport.checked===true),
                 stMusicUrl:this.stMusicUrl.value
             };
+            this.loadConf=function(){
+                if(localStorage){
+                    var sUIcfg=localStorage.sUIcfg;
+                    if(sUIcfg!==null){
+                        this.conf=$.extend(this.conf,JSON.parse(sUIcfg));
+                        for(var key in this.conf){
+                            try{
+                                this[key].value=this.conf[key];
+                            }catch(e){}
+                        }
+                    }
+                }
+            };
+            this.loadConf();
             this.stMusic.src=this.conf.stMusicUrl;
-
+            this.storeConf=function(){
+                if(localStorage){
+                    var sUIcfg=JSON.stringify(this.conf);
+                    localStorage.sUIcfg=sUIcfg;
+                }
+            };
+            this.stSearchCfg.onclick=function(){
+                document.getElementById("header").style.display='none';
+                document.body.style.paddingTop=0;
+                document.body.style.paddingLeft=0;
+                //default search arguments
+                var data={"dynamicCondition":{"shopStatus":["hasPhoneNo","newshop"]},"condition":{"mainCategory":2,"category":[702,47,701,444,38,39,42,386],"mainRegion":-1,"region":[],"ownerType":1,"city":2,"sortBy":-1},"pagination":{"isRequested":false,"isRequesting":false,"isEnd":false,"index":1,"size":2},"honeycomb":{"distance":5,"type":"cpsscore"}};
+                var url="https://a.dper.com/shops#/shops/cpublic?data="+encodeURI(JSON.stringify(data));
+                location.replace(url);
+            }
             this.stBtn.onclick=function(){
                 self.toggle();
             };
@@ -345,28 +398,36 @@
                     loop.start();
                 }else{
                     loop.stop();
+                    sUI.loadConf();
                 }
                 self.toggle();
             };
             this.stDelay.onchange=function(){
                 self.conf.stDelay=this.value;
+                self.storeConf();
             };
             this.stLimit.onchange=function(){
                 self.conf.stLimit=this.value;
+                self.storeConf();
             };
             this.stTimes.onchange=function(){
                 self.conf.stTimes=this.value;
+                self.storeConf();
             };
             this.stImport.onchange=function(){
                 self.conf.stImport=(this.checked=="checked"||this.checked===true);
+                self.storeConf();
             };
             this.stMusicUrl.onchange=function(){
                 self.conf.stMusicUrl=this.value;
                 self.stMusic.src=this.value;
+                self.storeConf();
             };
             this.shopInfo=function(id,name){
                 $("#stPanel").append("<div class='stShopInfo'>"+id+" : "+name+"</div>");
             };
+
+
         };
         this.toggle=function(){
             var stTable=$("#stTable").get(0);

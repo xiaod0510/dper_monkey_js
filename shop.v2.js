@@ -6,7 +6,7 @@
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        GM_notification
-// @version      2.9
+// @version      3.0
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -193,16 +193,6 @@
             importBtn.click();
             logger("自动导入:"+shopName+","+shopId);
             sUI.shopInfo(shopId,shopName);
-            GM_notification({
-                title:"成功导入",
-                text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
-                highlight:true,
-                timeout:0,
-                image:"https://a.dper.com/menus/static/img/logo.png",
-                onclick:function(){
-                    window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
-                }
-            });
             sUI.notify();
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
@@ -424,7 +414,17 @@
                 self.storeConf();
             };
             this.shopInfo=function(id,name){
-                $("#stPanel").append("<div class='stShopInfo'>"+id+" : "+name+"</div>");
+                $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1' >"+id+" : "+name+"</a></div>");
+                GM_notification({
+                    title:"成功导入",
+                    text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
+                    highlight:true,
+                    timeout:0,
+                    image:"https://a.dper.com/menus/static/img/logo.png",
+                    onclick:function(){
+                        window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
+                    }
+                });
             };
 
 

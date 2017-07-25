@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name         shopAutoRef
-// @namespace    http://tampermonkey.net/
-// @version      0.1
+// @namespace    http://xiaod0510.github.io/
+// @version      3.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
 // @grant        GM_notification
-// @version      3.0
 // @updateURL    https://raw.githubusercontent.com/xiaod0510/dper_monkey_js/master/shop.v2.js
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // ==/UserScript==
@@ -21,7 +20,7 @@
         if(dbg!==undefined&&dbg){
             if(msg.indexOf('倒计')<0)
                 console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+msg);
-            document.title=msg;
+            document.title=sUI.conf.curUserName+" "+msg;
         }
     }
     //事件驱动器
@@ -192,7 +191,20 @@
             }
             importBtn.click();
             logger("自动导入:"+shopName+","+shopId);
-            sUI.shopInfo(shopId,shopName);
+
+            $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1' >"+shopId+" : "+shopName+"</a></div>");
+            
+            GM_notification({
+                title:"成功导入到[ "+sUI.conf.curUserName+" ]名下",
+                text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
+                highlight:true,
+                timeout:0,
+                image:"https://a.dper.com/menus/static/img/logo.png",
+                onclick:function(){
+                    window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
+                }
+            });
+
             sUI.notify();
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
@@ -346,25 +358,30 @@
                 stTimes:this.stTimes.value,
                 stDelay:this.stDelay.value,
                 stImport:(this.stImport.checked=="checked"||this.stImport.checked===true),
-                stMusicUrl:this.stMusicUrl.value
+                stMusicUrl:this.stMusicUrl.value,
+                curUserName:$(".header span:contains(你好，)").prev().text()
             };
             this.loadConf=function(){
-                if(localStorage){
-                    var sUIcfg=localStorage.sUIcfg;
-                    if(sUIcfg!==null){
-                        this.conf=$.extend(this.conf,JSON.parse(sUIcfg));
-                        for(var key in this.conf){
-                            try{
-                                this[key].value=this.conf[key];
-                            }catch(e){}
+                try{
+                    if(localStorage){
+                        var sUIcfg=localStorage.sUIcfg;
+                        if(sUIcfg!==null){
+                            this.conf=$.extend(this.conf,JSON.parse(sUIcfg));
+                            for(var key in this.conf){
+                                try{
+                                    this[key].value=this.conf[key];
+                                }catch(e){}
+                            }
                         }
                     }
-                }
+                }catch(e){}
             };
             this.loadConf();
             this.stMusic.src=this.conf.stMusicUrl;
             this.storeConf=function(){
                 if(localStorage){
+                    delete this.conf.stStart;
+                    delete this.conf.stImport;
                     var sUIcfg=JSON.stringify(this.conf);
                     localStorage.sUIcfg=sUIcfg;
                 }
@@ -377,7 +394,7 @@
                 var data={"dynamicCondition":{"shopStatus":["hasPhoneNo","newshop"]},"condition":{"mainCategory":2,"category":[702,47,701,444,38,39,42,386],"mainRegion":-1,"region":[],"ownerType":1,"city":2,"sortBy":-1},"pagination":{"isRequested":false,"isRequesting":false,"isEnd":false,"index":1,"size":2},"honeycomb":{"distance":5,"type":"cpsscore"}};
                 var url="https://a.dper.com/shops#/shops/cpublic?data="+encodeURI(JSON.stringify(data));
                 location.replace(url);
-            }
+            };
             this.stBtn.onclick=function(){
                 self.toggle();
             };
@@ -413,19 +430,7 @@
                 self.stMusic.src=this.value;
                 self.storeConf();
             };
-            this.shopInfo=function(id,name){
-                $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1' >"+id+" : "+name+"</a></div>");
-                GM_notification({
-                    title:"成功导入",
-                    text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
-                    highlight:true,
-                    timeout:0,
-                    image:"https://a.dper.com/menus/static/img/logo.png",
-                    onclick:function(){
-                        window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
-                    }
-                });
-            };
+
 
 
         };

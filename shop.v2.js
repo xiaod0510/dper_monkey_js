@@ -12,19 +12,21 @@
 
 (function () {
     'use strict';
-    if(location.href.indexOf("cpublic")<0){
+    if (location.href.indexOf("cpublic") < 0) {
         return;
     }
-    var dbg=true;
-    function logger(msg){
-        if(dbg!==undefined&&dbg){
-            if(msg.indexOf('倒计')<0)
-                console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t"+msg);
-            document.title=sUI.conf.curUserName+" "+msg;
+    var dbg = true;
+
+    function logger(msg) {
+        if (dbg !== undefined && dbg) {
+            if (msg.indexOf('倒计') < 0)
+                console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t" + msg);
+            document.title = sUI.conf.curUserName + " " + msg;
         }
     }
+
     //事件驱动器
-    var EventLoop=function(loopunit){
+    var EventLoop = function (loopunit) {
         /*
          var $e={
          cb:function(){},
@@ -34,65 +36,73 @@
          limit:10//间隔次数
          };
          */
-        this.eventTick=0;
-        this.stoped=true;
-        this.loopunit=loopunit||50;//loop最小时间单元(毫秒)
-        this.eventQueue=[];
-        this.run=function(){
-            if(this.stoped)return;
-            var event=this.eventQueue.shift();
+        this.stoped = true;
+        this.loopunit = loopunit || 50;//loop最小时间单元(毫秒)
+        this.eventQueue = [];
+        this.eventPush = function (event) {
+            event.tmTicket = new Date().getTime();
+            this.eventQueue.push(event);
+        }
+        this.run = function () {
+            if (this.stoped)return;
+            var event = this.eventQueue.shift();
             //事件单次调用
-            if(event!=null ){
-                if(event.$pass==NaN ||event.loop==NaN || event.limit==NaN){
+            if (event != null) {
+                if (event.$pass == NaN || event.loop == NaN || event.limit == NaN || event.tmTicket == NaN) {
                     return;
                 }
-                if(event.$pass--<=0){
-                    this.eventTick++;
+                var tmLimit = new Date().getTime() - event.tmTicket;
+                if (tmLimit < this.loopunit) {
+                    this.eventQueue.push(event);
+                    return;
+                }
+                event.$pass -= parseInt(tmLimit / loopunit);
+                if (event.$pass <= 0) {
                     event.cb.call(event);
                     event.loop--;
-                    event.$pass=event.limit;
+                    event.$pass = event.limit;
                     //loop未归零,则继续将事件放入队列
-                    if(event.loop>0){
-                        this.eventQueue.push(event);
+                    if (event.loop > 0) {
+                        this.eventPush(event);
                     }
-                }else{
-                    this.eventQueue.push(event);
+                } else {
+                    this.eventPush(event);
                 }
             }
         };
-        this.start=function(){
+        this.start = function () {
             $(".stShopInfo").remove();
-            this.startTime=new Date();
-            this.stoped=false;
+            this.startTime = new Date();
+            this.stoped = false;
             //通过setInterval实现事件循环
-            var self=this;
-            if(self.interval==null){
-                self.interval=setInterval(function(){
+            var self = this;
+            if (self.interval == null) {
+                self.interval = setInterval(function () {
                     self.run();
-                },self.loopunit);
+                }, self.loopunit);
             }
             logger("loop started");
         };
-        this.stop=function(){
-            this.stoped=true;
-            this.eventQueue=[];
+        this.stop = function () {
+            this.stoped = true;
+            this.eventQueue = [];
             //clearInterval(this.interval);
             logger("loop stopped");
         };
-        this.reg=function(event){
-            event.$pass=event.limit;
-            this.eventQueue.push(event);
-            logger("loop event add :"+event.desc);
+        this.reg = function (event) {
+            event.$pass = event.limit;
+            this.eventPush(event);
+            logger("loop event add :" + event.desc);
         };
         return this;
     };
 
     //ui初始化
-    var initEvent={
-        loop:1,
-        limit:20,
-        desc:"init UI",
-        cb:function(event) {
+    var initEvent = {
+        loop: 1,
+        limit: 20,
+        desc: "init UI",
+        cb: function (event) {
             try {
                 sUI.stSearchCfg.click();
                 loop.reg(researchEvent.build());
@@ -102,24 +112,28 @@
         }
     };
     //刷新事件
-    var researchEvent={
-        desc:"重新搜索...",
-        cb:function() {
-            if (!sUI.conf.stStart){
-                this.loop=0;
+    var researchEvent = {
+        desc: "重新搜索...",
+        cb: function () {
+            if (!sUI.conf.stStart) {
+                this.loop = 0;
                 return;
             }
-            if(this.loop<=1){
+            if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
             }
-            if(new Date().getHours()==21){
+            if (new Date().getHours() == 21) {
                 loop.stop();
             }
 
-            $("body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4) > div").find("div[class^=container]").each(function(n,d){if($("span:contains(冻结中)",d).length!=0){$(d).hide();}});
-            sUI.stTimes.value=this.loop;
-            var isLoading=$("div:contains('加载中...')").parent().parent().parent().parent().last();
-            if(isLoading.css("display")!="none"){
+            $("body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4) > div").find("div[class^=container]").each(function (n, d) {
+                if ($("span:contains(冻结中)", d).length != 0) {
+                    $(d).hide();
+                }
+            });
+            sUI.stTimes.value = this.loop;
+            var isLoading = $("div:contains('加载中...')").parent().parent().parent().parent().last();
+            if (isLoading.css("display") != "none") {
                 this.loop++;
                 return;
             }
@@ -129,17 +143,17 @@
             if (oldShops.length === 0) {
                 oldShops = shops;
             } else {
-                var minus=shops.minus(oldShops);
-                if(minus.length!==0){
+                var minus = shops.minus(oldShops);
+                if (minus.length !== 0) {
                     logger("找到新店铺");
                     //sUI.stStart.click();
                     //sUI.notify();
-                    if(sUI.conf.stImport){
-                        for(var i=0;i!=minus.length;i++){
+                    if (sUI.conf.stImport) {
+                        for (var i = 0; i != minus.length; i++) {
                             //loop.eventQueue=[];
                             //loop.reg(importEvent.build(1,1,[minus[i]]));
                             //直接点击导入
-                            var ime=importEvent.build(1,1,[minus[i]]);
+                            var ime = importEvent.build(1, 1, [minus[i]]);
                             ime.cb();
                         }
                     }
@@ -148,14 +162,14 @@
                     return;
                 }
             }
-            logger(this.desc+sUI.stTimes.value);
+            logger(this.desc + sUI.stTimes.value);
             $("button:contains('查询')").click();
 
         },
-        build:function(){
-            var e=$.extend({},this);
-            e.loop=parseInt(sUI.conf.stTimes);
-            e.limit=parseInt(sUI.conf.stLimit/loop.loopunit);
+        build: function () {
+            var e = $.extend({}, this);
+            e.loop = parseInt(sUI.conf.stTimes);
+            e.limit = parseInt(sUI.conf.stLimit / loop.loopunit);
             return e;
         }
     };
@@ -163,80 +177,80 @@
      * 自动导入
      * @type {{cb: cb}}
      */
-    var importEvent={
-        loop:1,
-        limit:1,
-        desc:"自动导入",
-        cb:function(){
-            var shopId=this.args[0];
-            var baseSelector="span[data-reactid*="+shopId+"]";
-            var shopName=$(baseSelector).first().text();
-            if(shopName.length===0){
-                shopName="unknow";
+    var importEvent = {
+        loop: 1,
+        limit: 1,
+        desc: "自动导入",
+        cb: function () {
+            var shopId = this.args[0];
+            var baseSelector = "span[data-reactid*=" + shopId + "]";
+            var shopName = $(baseSelector).first().text();
+            if (shopName.length === 0) {
+                shopName = "unknow";
             }
-            var importBtn=$(baseSelector+":contains('导入')");
-            var $importBtn=[];
-            importBtn.each(function(n,d){
-                if($(this).text()=="导入"){
-                    $importBtn=$(this);
+            var importBtn = $(baseSelector + ":contains('导入')");
+            var $importBtn = [];
+            importBtn.each(function (n, d) {
+                if ($(this).text() == "导入") {
+                    $importBtn = $(this);
                 }
             });
-            if($importBtn.length===0){
+            if ($importBtn.length === 0) {
                 return;
             }
             var assNewer = importBtn.parent().parent().last().prev();
-            console.log("assNewer:"+assNewer.text());
-            if(assNewer.text().indexOf("变更为")>0){
+            console.log("assNewer:" + assNewer.text());
+            if (assNewer.text().indexOf("变更为") > 0) {
                 return;
             }
             importBtn.click();
-            logger("自动导入:"+shopName+","+shopId);
+            logger("自动导入:" + shopName + "," + shopId);
 
-            $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1' >"+shopId+" : "+shopName+"</a></div>");
-            
+            $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1' >" + shopId + " : " + shopName + "</a></div>");
+
             GM_notification({
-                title:"成功导入到[ "+sUI.conf.curUserName+" ]名下",
-                text:"店铺名:["+shopId+"]"+shopName+",点击打开店铺页",
-                highlight:true,
-                timeout:0,
-                image:"https://a.dper.com/menus/static/img/logo.png",
-                onclick:function(){
-                    window.open("https://a.dper.com/shop/view?shopId="+shopId+"&ist=20&sty=-1");
+                title: "成功导入到[ " + sUI.conf.curUserName + " ]名下",
+                text: "店铺名:[" + shopId + "]" + shopName + ",点击打开店铺页",
+                highlight: true,
+                timeout: 0,
+                image: "https://a.dper.com/menus/static/img/logo.png",
+                onclick: function () {
+                    window.open("https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1");
                 }
             });
 
             sUI.notify();
             //.0.1.3.0.0:$6093015.0.1.4.0.$import
         },
-        build:function(loop,limit,args){
-            var e=$.extend({},this);
-            e.loop=loop;
-            e.limit=limit;
-            e.args=args;
+        build: function (loop, limit, args) {
+            var e = $.extend({}, this);
+            e.loop = loop;
+            e.limit = limit;
+            e.args = args;
             return e;
         }
     };
-    var delayEvent={
-        loop:1,
-        limit:1,
-        desc:"延时",
-        cb:function(){
-            sUI.stDelay.value=this.loop;
-            logger("倒计"+this.loop+"秒");
-            if(this.loop<=1){
-                logger("延时结束:"+this.start+"---"+new Date());
-                sUI.stTimes.value=sUI.conf.stTimes;
-                sUI.stDelay.value=sUI.conf.stDelay;
+    var delayEvent = {
+        loop: 1,
+        limit: 1,
+        desc: "延时",
+        cb: function () {
+            sUI.stDelay.value = this.loop;
+            logger("倒计" + this.loop + "秒");
+            if (this.loop <= 1) {
+                logger("延时结束:" + this.start + "---" + new Date());
+                sUI.stTimes.value = sUI.conf.stTimes;
+                sUI.stDelay.value = sUI.conf.stDelay;
                 loop.reg(researchEvent.build());
             }
 
         },
-        build:function(sec){
-            var e=$.extend({},this);
-            sec=sec||parseInt(sUI.conf.stDelay);
-            e.limit=1000/loop.loopunit;
-            e.loop=parseInt(sec);
-            e.start=new Date();
+        build: function (sec) {
+            var e = $.extend({}, this);
+            sec = sec || parseInt(sUI.conf.stDelay);
+            e.limit = 1000 / loop.loopunit;
+            e.loop = parseInt(sec);
+            e.start = new Date();
             logger(JSON.stringify(e));
             return e;
         }
@@ -246,43 +260,44 @@
      * @returns {Array}
      */
     var oldShops = [];
+
     function findShopId() {
         var shops = {};
-        var spanShopLb = $("span:contains('导入')","body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
-        spanShopLb.each(function(n,d){
-            var reactid=$(this).attr("data-reactid");
-            if(reactid===null){
+        var spanShopLb = $("span:contains('导入')", "body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
+        spanShopLb.each(function (n, d) {
+            var reactid = $(this).attr("data-reactid");
+            if (reactid === null) {
                 return;
             }
-            var mch=/\$(\d+)\./.exec(reactid);
-            if(mch==null||mch.length!=2){
+            var mch = /\$(\d+)\./.exec(reactid);
+            if (mch == null || mch.length != 2) {
                 return;
             }
-            shops[mch[1]+""]=0;
+            shops[mch[1] + ""] = 0;
         });
-        var result=[];
-        for(var s in shops){
+        var result = [];
+        for (var s in shops) {
             result.push(s);
         }
         return result;
     }
 
     //mock error
-    (function(){
-        Promise.$$reject=Promise.reject;
-        Promise.reject=function(){
-            if(arguments.length==1&&arguments[0].message=="您访问过于频繁，请稍后访问！"){
-                if(sUI.conf.stStart){
+    (function () {
+        Promise.$$reject = Promise.reject;
+        Promise.reject = function () {
+            if (arguments.length == 1 && arguments[0].message == "您访问过于频繁，请稍后访问！") {
+                if (sUI.conf.stStart) {
                     loop.stop();
-                    loop.reg(delayEvent.build(60*3));
+                    loop.reg(delayEvent.build(60 * 3));
                     loop.start();
                 }
             }
 
-            setTimeout(function(){
+            setTimeout(function () {
                 document.querySelector("body > div:nth-child(5) > div > div > div:nth-child(1)").click();
-            },2500);
-            return Promise.$$reject.call(this,arguments[0]);
+            }, 2500);
+            return Promise.$$reject.call(this, arguments[0]);
         };
         Array.prototype.minus = function (arr) {
             var result = new Array();
@@ -291,8 +306,7 @@
                 obj[arr[i]] = 1;
             }
             for (var j = 0; j < this.length; j++) {
-                if (!obj[this[j]])
-                {
+                if (!obj[this[j]]) {
                     obj[this[j]] = 1;
                     result.push(this[j]);
                 }
@@ -301,7 +315,7 @@
         };
     })();
 
-    var settingHtml="\
+    var settingHtml = "\
 <div id='stPanel' style='position: fixed;top:40px;right:20px;z-index:10000;'>\
 <audio id='stMusic'></audio>\
 <button id='stBtn' class='eg eg-sm eg-btn eg-btn-sm' style='float:right;'>?</button>\
@@ -339,110 +353,124 @@
 ";
 
 
-    var SettingUI=function(){
-        var self=this;
-        this.conf={};
-        this.init=function(){
-            var container=$("<div>").append(settingHtml).appendTo(document.body);
-            this.stStart=$("#stStart").get(0);
-            this.stBtn=$("#stBtn").get(0);
-            this.stMusic=$("#stMusic").get(0);
-            this.stLimit=$("#stLimit").get(0);
-            this.stTimes=$("#stTimes").get(0);
-            this.stImport=$("#stImport").get(0);
-            this.stMusicUrl=$("#stMusicUrl").get(0);
-            this.stDelay=$("#stDelay").get(0);
-            this.stSearchCfg=$("#stSearchCfg").get(0);
-            this.conf={
-                stLimit:this.stLimit.value,
-                stTimes:this.stTimes.value,
-                stDelay:this.stDelay.value,
-                stImport:(this.stImport.checked=="checked"||this.stImport.checked===true),
-                stMusicUrl:this.stMusicUrl.value,
-                curUserName:$(".header span:contains(你好，)").prev().text()
+    var SettingUI = function () {
+        var self = this;
+        this.conf = {};
+        this.init = function () {
+            var container = $("<div>").append(settingHtml).appendTo(document.body);
+            this.stStart = $("#stStart").get(0);
+            this.stBtn = $("#stBtn").get(0);
+            this.stMusic = $("#stMusic").get(0);
+            this.stLimit = $("#stLimit").get(0);
+            this.stTimes = $("#stTimes").get(0);
+            this.stImport = $("#stImport").get(0);
+            this.stMusicUrl = $("#stMusicUrl").get(0);
+            this.stDelay = $("#stDelay").get(0);
+            this.stSearchCfg = $("#stSearchCfg").get(0);
+            this.conf = {
+                stLimit: this.stLimit.value,
+                stTimes: this.stTimes.value,
+                stDelay: this.stDelay.value,
+                stImport: (this.stImport.checked == "checked" || this.stImport.checked === true),
+                stMusicUrl: this.stMusicUrl.value,
+                curUserName: $(".header span:contains(你好，)").prev().text()
             };
-            this.loadConf=function(){
-                try{
-                    if(localStorage){
-                        var sUIcfg=localStorage.sUIcfg;
-                        if(sUIcfg!==null){
-                            this.conf=$.extend(this.conf,JSON.parse(sUIcfg));
-                            for(var key in this.conf){
-                                try{
-                                    this[key].value=this.conf[key];
-                                }catch(e){}
+            this.loadConf = function () {
+                try {
+                    if (localStorage) {
+                        var sUIcfg = localStorage.sUIcfg;
+                        if (sUIcfg !== null) {
+                            this.conf = $.extend(this.conf, JSON.parse(sUIcfg));
+                            for (var key in this.conf) {
+                                try {
+                                    this[key].value = this.conf[key];
+                                } catch (e) {
+                                }
                             }
                         }
                     }
-                }catch(e){}
-            };
-            this.loadConf();
-            this.stMusic.src=this.conf.stMusicUrl;
-            this.storeConf=function(){
-                if(localStorage){
-                    delete this.conf.stStart;
-                    delete this.conf.stImport;
-                    var sUIcfg=JSON.stringify(this.conf);
-                    localStorage.sUIcfg=sUIcfg;
+                } catch (e) {
                 }
             };
-            this.stSearchCfg.onclick=function(){
-                document.getElementById("header").style.display='none';
-                document.body.style.paddingTop=0;
-                document.body.style.paddingLeft=0;
+            this.loadConf();
+            this.stMusic.src = this.conf.stMusicUrl;
+            this.storeConf = function () {
+                if (localStorage) {
+                    delete this.conf.stStart;
+                    delete this.conf.stImport;
+                    var sUIcfg = JSON.stringify(this.conf);
+                    localStorage.sUIcfg = sUIcfg;
+                }
+            };
+            this.stSearchCfg.onclick = function () {
+                document.getElementById("header").style.display = 'none';
+                document.body.style.paddingTop = 0;
+                document.body.style.paddingLeft = 0;
                 //default search arguments
-                var data={"dynamicCondition":{"shopStatus":["hasPhoneNo","newshop"]},"condition":{"mainCategory":2,"category":[702,47,701,444,38,39,42,386],"mainRegion":-1,"region":[],"ownerType":1,"city":2,"sortBy":-1},"pagination":{"isRequested":false,"isRequesting":false,"isEnd":false,"index":1,"size":2},"honeycomb":{"distance":5,"type":"cpsscore"}};
-                var url="https://a.dper.com/shops#/shops/cpublic?data="+encodeURI(JSON.stringify(data));
+                var data = {
+                    "dynamicCondition": {"shopStatus": ["hasPhoneNo", "newshop"]},
+                    "condition": {
+                        "mainCategory": 2,
+                        "category": [702, 47, 701, 444, 38, 39, 42, 386],
+                        "mainRegion": -1,
+                        "region": [],
+                        "ownerType": 1,
+                        "city": 2,
+                        "sortBy": -1
+                    },
+                    "pagination": {"isRequested": false, "isRequesting": false, "isEnd": false, "index": 1, "size": 2},
+                    "honeycomb": {"distance": 5, "type": "cpsscore"}
+                };
+                var url = "https://a.dper.com/shops#/shops/cpublic?data=" + encodeURI(JSON.stringify(data));
                 location.replace(url);
             };
-            this.stBtn.onclick=function(){
+            this.stBtn.onclick = function () {
                 self.toggle();
             };
-            this.stStart.onclick=function(){
-                self.conf.stStart=this.checked;
+            this.stStart.onclick = function () {
+                self.conf.stStart = this.checked;
                 if (this.checked) {
                     loop.reg(researchEvent.build());
                     loop.start();
-                }else{
+                } else {
                     loop.stop();
                     sUI.loadConf();
                 }
                 self.toggle();
             };
-            this.stDelay.onchange=function(){
-                self.conf.stDelay=this.value;
+            this.stDelay.onchange = function () {
+                self.conf.stDelay = this.value;
                 self.storeConf();
             };
-            this.stLimit.onchange=function(){
-                self.conf.stLimit=this.value;
+            this.stLimit.onchange = function () {
+                self.conf.stLimit = this.value;
                 self.storeConf();
             };
-            this.stTimes.onchange=function(){
-                self.conf.stTimes=this.value;
+            this.stTimes.onchange = function () {
+                self.conf.stTimes = this.value;
                 self.storeConf();
             };
-            this.stImport.onchange=function(){
-                self.conf.stImport=(this.checked=="checked"||this.checked===true);
+            this.stImport.onchange = function () {
+                self.conf.stImport = (this.checked == "checked" || this.checked === true);
                 self.storeConf();
             };
-            this.stMusicUrl.onchange=function(){
-                self.conf.stMusicUrl=this.value;
-                self.stMusic.src=this.value;
+            this.stMusicUrl.onchange = function () {
+                self.conf.stMusicUrl = this.value;
+                self.stMusic.src = this.value;
                 self.storeConf();
             };
-
 
 
         };
-        this.toggle=function(){
-            var stTable=$("#stTable").get(0);
-            if(stTable.style.display==="block"){
-                stTable.style.display="none";
-            }else{
-                stTable.style.display="block";
+        this.toggle = function () {
+            var stTable = $("#stTable").get(0);
+            if (stTable.style.display === "block") {
+                stTable.style.display = "none";
+            } else {
+                stTable.style.display = "block";
             }
         };
-        this.notify=function(){
+        this.notify = function () {
             self.stMusic.play();
         };
         return this;
@@ -451,7 +479,7 @@
     // Your code here...
     var sUI = new SettingUI();
     sUI.init();
-    var loop=new EventLoop(50);
+    var loop = new EventLoop(50);
     loop.reg(initEvent);
     loop.start();
 })();

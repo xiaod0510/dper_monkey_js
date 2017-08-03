@@ -15,7 +15,7 @@
     if (location.href.indexOf("cpublic") < 0) {
         return;
     }
-    var dbg = true;
+    var dbg = false;
 
     function logger(msg) {
         if (dbg !== undefined && dbg) {
@@ -49,18 +49,8 @@
             if (!$.isNumeric(event.$pass)) return;
             if (!$.isNumeric(event.loop)) return;
             if (!$.isNumeric(event.limit)) return;
-            // if (!$.isNumeric(event.tmTicket)) return;
-            // var now = new Date().getTime();
-            // var tmLimit = now - event.tmTicket;
 
-            //如果时间间隔小于loopunit 则跳过本次操作
-            // if (tmLimit < this.loopunit){
-            //     this.eventQueue.push(event);
-            //     return;
-            // }
-
-            event.$pass -= 1;//parseInt(tmLimit / loopunit);
-            // event.tmTicket = now - (tmLimit % loopunit);
+            event.$pass -= 1;
             if (event.$pass <= 0) {
                 event.cb.call(event);
                 event.loop--;
@@ -93,7 +83,6 @@
             logger("loop stopped");
         };
         this.eventPush = function (event) {
-            // event.tmTicket = new Date().getTime();
             this.eventQueue.push(event);
         };
         this.reg = function (event) {
@@ -127,6 +116,11 @@
                 this.loop = 0;
                 return;
             }
+            var curHour=new Date().getHours();
+            if (curHour >= 22 || curHour<=7) {
+                this.loop++;
+                return;
+            }
             this.loadStatus=this.loadStatus||0;
             switch (this.loadStatus){
                 case 0:
@@ -156,10 +150,6 @@
 
             if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
-            }
-            if (new Date().getHours() == 21) {
-                sUI.stStart.click();
-                loop.stop();
             }
 
             sUI.stTimes.value = this.loop;
@@ -226,22 +216,21 @@
             }
             importBtn.click();
             logger("自动导入:" + shopName + "," + shopId);
-
-            $("#stPanel").append("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1' >" + shopId + " : " + shopName + "</a></div>");
+            $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1' >" + shopId + " : " + shopName + "</a></div>")
+                .appendTo($("#stPanel"));
 
             GM_notification({
                 title: "成功导入到[ " + sUI.conf.curUserName + " ]名下",
                 text: "店铺名:[" + shopId + "]" + shopName + ",点击打开店铺页",
                 highlight: true,
-                timeout: 0,
+                timeout: 1000*36000,
                 image: "https://a.dper.com/menus/static/img/logo.png",
                 onclick: function () {
                     window.open("https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1");
                 }
             });
 
-            sUI.notify();
-            //.0.1.3.0.0:$6093015.0.1.4.0.$import
+            sUI.stMusic.play();
         },
         build: function (loop, limit, args) {
             var e = $.extend({}, this);
@@ -398,6 +387,8 @@
                         var sUIcfg = localStorage.sUIcfg;
                         if (sUIcfg !== null) {
                             this.conf = $.extend(this.conf, JSON.parse(sUIcfg));
+                            delete this.conf.stStart;
+                            delete this.conf.stImport;
                             for (var key in this.conf) {
                                 try {
                                     this[key].value = this.conf[key];
@@ -412,15 +403,13 @@
             this.loadConf();
             this.storeConf = function () {
                 if (localStorage) {
-                    delete this.conf.stStart;
-                    delete this.conf.stImport;
                     var sUIcfg = JSON.stringify(this.conf);
                     localStorage.sUIcfg = sUIcfg;
                 }
             };
             this.stSearchCfg.onclick = function () {
                 document.getElementById("header").style.display = 'none';
-                document.body.style.marginTop="-200px";
+                document.body.style.marginTop="-150px";
                 document.body.style.marginLeft="-200px";
                 //default search arguments
                 var data = {
@@ -434,7 +423,7 @@
                         "city": 2,
                         "sortBy": -1
                     },
-                    "pagination": {"isRequested": false, "isRequesting": false, "isEnd": false, "index": 1, "size": 2},
+                    "pagination": {"isRequested": false, "isRequesting": false, "isEnd": false, "index": 1, "size": 10},
                     "honeycomb": {"distance": 5, "type": "cpsscore"}
                 };
                 var url = "https://a.dper.com/shops#/shops/cpublic?data=" + encodeURI(JSON.stringify(data));
@@ -482,9 +471,6 @@
             } else {
                 stTable.style.display = "block";
             }
-        };
-        this.notify = function () {
-            self.stMusic.play();
         };
         return this;
     };

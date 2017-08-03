@@ -127,21 +127,42 @@
                 this.loop = 0;
                 return;
             }
+            this.loadStatus=this.loadStatus||0;
+            switch (this.loadStatus){
+                case 0:
+                    this.loop++;
+                    var isLoading = $("div:contains('加载中...')").parent().parent().parent().parent().last();
+                    isLoading.css("display","block");
+                    $("button:contains('查询')").click();
+                    this.loadStatus=1;
+                    logger("点击查询按钮");
+                    return;
+                case 1:
+                    //判断数据是否加载完毕
+                    this.loop++;
+                    logger("判断是否加载完成");
+                    var isLoading = $("div:contains('加载中...')").parent().parent().parent().parent().last();
+                    if (isLoading.css("display") != "none") {
+                        logger("尚未加载成功");
+                        return;
+                    }
+                    this.loadStatus=2;
+                    logger("加载完成");
+                    return;
+
+            }
+            logger("查找店铺信息");
+            this.loadStatus=0;
+
             if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
             }
             if (new Date().getHours() == 21) {
+                sUI.stStart.click();
                 loop.stop();
             }
 
             sUI.stTimes.value = this.loop;
-            //判断数据是否加载完毕
-            var isLoading = $("div:contains('加载中...')").parent().parent().parent().parent().last();
-            if (isLoading.css("display") != "none") {
-                this.loop++;
-                this.$pass=this.limit;
-                return;
-            }
             //获取店铺Id
             var shops = findShopId();
             //校验是否有新店铺
@@ -164,7 +185,6 @@
                 }
             }
             logger(this.desc + sUI.stTimes.value);
-            $("button:contains('查询')").click();
 
         },
         build: function () {
@@ -337,15 +357,15 @@
 </tr>\
 <tr>\
 <td>刷新间隔(毫秒)</td>\
-<td><input id='stLimit' type='text' value='500'></td>\
+<td><input id='stLimit' type='text' value='200'></td>\
 </tr>\
 <tr>\
 <td>刷新次数</td>\
-<td><input id='stTimes' type='text' value='130'></td>\
+<td><input id='stTimes' type='text' value='1'></td>\
 </tr>\
 <tr>\
 <td>刷新延时(秒)</td>\
-<td><input id='stDelay' type='text' value='900'></td>\
+<td><input id='stDelay' type='text' value='5'></td>\
 </tr>\
 </table>\
 </div>\

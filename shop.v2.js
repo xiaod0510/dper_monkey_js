@@ -21,8 +21,8 @@
         if (dbg !== undefined && dbg) {
             if (msg.indexOf('倒计') < 0)
                 console.log("\t\t\t\t\t\t\t\t\t\t\t\t\t\t" + msg);
-            document.title = sUI.conf.curUserName + " " + msg;
         }
+        document.title = sUI.conf.curUserName + " " + msg;
     }
 
     //事件驱动器
@@ -116,11 +116,6 @@
                 this.loop = 0;
                 return;
             }
-            var curHour=new Date().getHours();
-            if (curHour >= 22 || curHour<=7) {
-                this.loop++;
-                return;
-            }
             this.loadStatus=this.loadStatus||0;
             switch (this.loadStatus){
                 case 0:
@@ -145,12 +140,19 @@
                     return;
 
             }
-            logger("查找店铺信息");
             this.loadStatus=0;
 
             if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
             }
+            var now=new Date();
+            var curHour=now.getHours();
+            var curDay=now.getDay();
+            if (curHour >= 22 || curHour<=8 || curDay==0) {
+                logger("休息时间段");
+                return;
+            }
+            logger("查找店铺信息");
 
             sUI.stTimes.value = this.loop;
             //获取店铺Id

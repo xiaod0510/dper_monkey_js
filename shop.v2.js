@@ -15,7 +15,7 @@
     if (location.href.indexOf("cpublic") < 0) {
         return;
     }
-    var dbg = false;
+    window.dbg = false;
 
     function logger(msg) {
         if (dbg !== undefined && dbg) {
@@ -116,14 +116,14 @@
                 this.loop = 0;
                 return;
             }
-            this.loadStatus=this.loadStatus||0;
-            switch (this.loadStatus){
+            this.loadStatus = this.loadStatus || 0;
+            switch (this.loadStatus) {
                 case 0:
                     this.loop++;
                     var isLoading = $("div:contains('加载中...')").parent().parent().parent().parent().last();
-                    isLoading.css("display","block");
+                    isLoading.css("display", "block");
                     $("button:contains('查询')").click();
-                    this.loadStatus=1;
+                    this.loadStatus = 1;
                     logger("点击查询按钮");
                     return;
                 case 1:
@@ -135,20 +135,20 @@
                         logger("尚未加载成功");
                         return;
                     }
-                    this.loadStatus=2;
+                    this.loadStatus = 2;
                     logger("加载完成");
                     return;
 
             }
-            this.loadStatus=0;
+            this.loadStatus = 0;
 
             if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
             }
-            var now=new Date();
-            var curHour=now.getHours();
-            var curDay=now.getDay();
-            if (curHour >= 22 || curHour<=8 || curDay==0) {
+            var now = new Date();
+            var curHour = now.getHours();
+            var curDay = now.getDay();
+            if (curHour >= 22 || curHour <= 8 || curDay == 0) {
                 logger("休息时间段");
                 return;
             }
@@ -217,22 +217,10 @@
                 return;
             }
             importBtn.click();
-            logger("自动导入:" + shopName + "," + shopId);
-            $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1' >" + shopId + " : " + shopName + "</a></div>")
-                .appendTo($("#stPanel"));
-
-            GM_notification({
-                title: "成功导入到[ " + sUI.conf.curUserName + " ]名下",
-                text: "店铺名:[" + shopId + "]" + shopName + ",点击打开店铺页",
-                highlight: true,
-                timeout: 1000*36000,
-                image: "https://a.dper.com/menus/static/img/logo.png",
-                onclick: function () {
-                    window.open("https://a.dper.com/shop/view?shopId=" + shopId + "&ist=20&sty=-1");
-                }
+            sUI.found.push({
+                id: shopId,
+                name: shopName
             });
-
-            sUI.stMusic.play();
         },
         build: function (loop, limit, args) {
             var e = $.extend({}, this);
@@ -298,12 +286,40 @@
     (function () {
         Promise.$$reject = Promise.reject;
         Promise.reject = function () {
-            if (arguments.length == 1 && arguments[0].message == "您访问过于频繁，请稍后访问！") {
-                if (sUI.conf.stStart) {
+            if (arguments.length == 1) {
+                var msg = arguments[0].message;
+                console.log("promise.reject:" + msg);
+                if (sUI.conf.stStart && msg == "您访问过于频繁，请稍后访问！") {
                     loop.stop();
                     loop.reg(delayEvent.build(60 * 3));
                     loop.start();
                 }
+                try {
+                    if (msg == "导入成功") {
+                        var info = sUI.found.shift();
+                        if (info != null) {
+                            logger("自动导入:" + info.name + "," + info.id);
+                            $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1' >" + info.id + " : " + info.name + "</a></div>")
+                                .appendTo($("#stPanel"));
+
+                            GM_notification({
+                                title: "成功导入到[ " + sUI.conf.curUserName + " ]名下",
+                                text: "店铺名:[" + info.id + "]" + info.name + ",点击打开店铺页",
+                                highlight: true,
+                                timeout: 1000 * 36000,
+                                image: "https://a.dper.com/menus/static/img/logo.png",
+                                onclick: function () {
+                                    window.open("https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1");
+                                }
+                            });
+                        }
+
+                        sUI.stMusic.play();
+                    }
+                } catch (e) {
+                    alert(e);
+                }
+                this.ownerShop();
             }
 
             setTimeout(function () {
@@ -358,6 +374,10 @@
 <td>刷新延时(秒)</td>\
 <td><input id='stDelay' type='text' value='5'></td>\
 </tr>\
+<tr>\
+<td><font color='blue'>不在线单店</font></td>\
+<td><input id='stNotOnline' type='text' value='/' readonly=readonly></td>\
+</tr>\
 </table>\
 </div>\
 ";
@@ -375,7 +395,9 @@
             this.stTimes = $("#stTimes").get(0);
             this.stImport = $("#stImport").get(0);
             this.stDelay = $("#stDelay").get(0);
+            this.stNotOnline = $("#stNotOnline").get(0);
             this.stSearchCfg = $("#stSearchCfg").get(0);
+            this.found = [];
             this.conf = {
                 stLimit: this.stLimit.value,
                 stTimes: this.stTimes.value,
@@ -411,8 +433,8 @@
             };
             this.stSearchCfg.onclick = function () {
                 document.getElementById("header").style.display = 'none';
-                document.body.style.marginTop="-150px";
-                document.body.style.marginLeft="-200px";
+                document.body.style.marginTop = "-150px";
+                document.body.style.marginLeft = "-200px";
                 //default search arguments
                 var data = {
                     "dynamicCondition": {"shopStatus": ["hasPhoneNo", "newshop"]},
@@ -439,11 +461,11 @@
                 if (this.checked) {
                     loop.reg(researchEvent.build());
                     loop.start();
-                    document.body.style.marginTop="-400px";
+                    document.body.style.marginTop = "-400px";
                 } else {
                     loop.stop();
                     sUI.loadConf();
-                    document.body.style.marginTop="-200px";
+                    document.body.style.marginTop = "-200px";
                 }
                 self.toggle();
             };
@@ -463,8 +485,7 @@
                 self.conf.stImport = (this.checked == "checked" || this.checked === true);
                 self.storeConf();
             };
-
-
+            this.ownerShop();
         };
         this.toggle = function () {
             var stTable = $("#stTable").get(0);
@@ -473,6 +494,33 @@
             } else {
                 stTable.style.display = "block";
             }
+        };
+        this.ownerShop=function(){
+            $.ajax({
+                type: "POST",
+                url: "/shop/__cascade__?cascade=Shop.ownerShop",
+                processData: false,
+                contentType: 'application/json',
+                data: '[{"type":"Shop","category":"ownerShop","as":"counts","params":{},"children":[]}]',
+                success: function(r) {
+                    try{
+                        debugger;
+                        var n=r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCount;
+                        var nlimit=r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCountLimit;
+                        self.stNotOnline.value=(n+"/"+nlimit);
+                        if(n==nlimit){
+                            GM_notification({
+                                title: "私海已满",
+                                text: "[不在线单店]个数:"+n+"/"+nlimit,
+                                highlight: true,
+                                timeout: 1000 * 36000,
+                                image: "https://a.dper.com/menus/static/img/logo.png"
+                            });
+                        }
+                    }catch(e){}
+                }
+                });
+
         };
         return this;
     };

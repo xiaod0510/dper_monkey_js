@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://xiaod0510.github.io/
-// @version      3.3
+// @version      3.4
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops

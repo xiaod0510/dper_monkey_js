@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://xiaod0510.github.io/
-// @version      3.4
+// @version      3.5
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
@@ -16,30 +16,30 @@
     if (location.href.indexOf("cpublic") < 0) {
         return;
     }
+
     /**flag 1:console 2:title 4:notify 8:mail*/
-    function logger(msg,flag,extInfo) {
-        flag=flag||3;
-        if(flag&1){
-            console.log(msg);
+    function logger(msg, flag, extInfo) {
+        flag = flag || 3;
+        if (flag & 1) {
+            console.log(flag + ":" + msg);
         }
-        if(flag&2){
-            document.title = sUI.conf.curUserName + " " + msg;
+        if (flag & 2) {
+            document.title = sUI.curUserName() + " " + msg;
         }
-        if(flag&4){
+        if (flag & 4) {
             GM_notification(extInfo);
         }
-        if(flag&8){
-            GM_xmlhttpRequest({
-                method: "POST",
-                url: "http://127.0.0.1/mail.lua",
-                data: msg,
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                onload: function(response) {
-                    logger(response.responseText,1|2|4);
-                }
-            });
+        if (flag & 8) {
+            var addrs="xiaod0510@aliyun.com".split(",");
+            for(var i=0;i!=addrs.length;i++){
+                GM_xmlhttpRequest({
+                    method: "GET",
+                    url: "http://127.0.0.1:45678/mail.do?subject="+extInfo.title+"&body="+extInfo.text+"&toaddr="+addrs[i],
+                    onload: function (response) {
+                        logger(response.responseText, 1 | 2 | 4);
+                    }
+                });
+            }
         }
     }
 
@@ -137,20 +137,26 @@
             var now = new Date();
             var curHour = now.getHours();
             var curDay = now.getDay();
-            if (curHour >= 22 || curHour <= 8 || curDay === 0) {
+            if (
+                //curHour >= 22 || 
+                //curHour <= 8 || 
+                curDay === 0
+            ) {
                 logger("休息时间段");
                 loop.reg(delayEvent.build());
                 sUI.ownerShop();
                 return;
             }
-            try{
+            try {
                 var notOnline = sUI.stNotOnline.value;
-                if(eval(notOnline)==1){
-                    logger("不在线单店已满:"+notOnline);
+                if (eval(notOnline) == 1) {
+                    sUI.ownerShop();
+                    logger("不在线单店已满:" + notOnline);
                     loop.reg(delayEvent.build());
                     return;
                 }
-            }catch(e){}
+            } catch (e) {
+            }
             this.loadStatus = this.loadStatus || 0;
             switch (this.loadStatus) {
                 case 0:
@@ -244,10 +250,25 @@
                 return;
             }
             importBtn.click();
-            sUI.found.push({
+            var info = {
                 id: shopId,
                 name: shopName
-            });
+            };
+            if (info != null) {
+                $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1' >" + info.id + " : " + info.name + "</a></div>")
+                    .appendTo($("#stPanel"));
+                var notify = {
+                    title: "成功导入到[ " + sUI.curUserName() + " ]名下",
+                    text: "店铺名:[" + info.id + "]" + info.name + ",不在线单店个数" + sUI.stNotOnline.value,
+                    highlight: true,
+                    timeout: 1000 * 36000,
+                    image: "https://a.dper.com/menus/static/img/logo.png",
+                    onclick: function () {
+                        window.open("https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1");
+                    }
+                };
+                logger(notify.title + notify.text, 1 | 2 | 4 | 8, notify);
+            }
         },
         build: function (loop, limit, args) {
             var e = $.extend({}, this);
@@ -323,29 +344,11 @@
                 }
                 try {
                     if (msg == "导入成功") {
-                        var info = sUI.found.shift();
-                        if (info != null) {
-                            logger("自动导入:" + info.name + "," + info.id);
-                            $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1' >" + info.id + " : " + info.name + "</a></div>")
-                                .appendTo($("#stPanel"));
-                            var notify={
-                                title: "成功导入到[ " + sUI.conf.curUserName + " ]名下",
-                                text: "店铺名:[" + info.id + "]" + info.name + ",不在线单店个数"+sUI.stNotOnline.value,
-                                highlight: true,
-                                timeout: 1000 * 36000,
-                                image: "https://a.dper.com/menus/static/img/logo.png",
-                                onclick: function () {
-                                    window.open("https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1");
-                                }
-                            };
-                            logger(notify.title + notify.text, 1 | 2 | 4 | 8, notify);
-                        }
                         sUI.stMusic.play();
                     }
                 } catch (e) {
                     alert(e);
                 }
-                sUI.ownerShop();
             }
 
             setTimeout(function () {
@@ -369,7 +372,7 @@
         };
     })();
 
-    var settingHtml="<div id='stPanel' style='position: fixed;top:40px;right:20px;z-index:10000;'>\n" +
+    var settingHtml = "<div id='stPanel' style='position: fixed;top:40px;right:20px;z-index:10000;'>\n" +
         "    <audio id='stMusic' autobuffer='autobuffer' autoplay='autoplay'>\n" +
         "        <source src='data:audio/mp3;base64,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qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqCAAHUAA/A/qqTEFNRTMuOTkuNaqqqv/7EMTfAMEgGUUABMJgJAWoYFAJTKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqggAB1hTxtVMQU1FMy45OS41VVVV//sQxN0BwRgXRwAFImAUhWhUIAkWVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjk5LjVVVVX/+xDE3QDBGCtFAoBKYBUAKJQAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EMTcgMDAAUagAAAgGIAo4AAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxNmDwGwXQAAAYGAMAugAAIxMVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xDE2oHAmANGoAAAIA4AaJQAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EMTZgcCYA0SgAAAwBYBoQAAABFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxNYDwAAB/gAAACAAAD/AAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=' />\n" +
         "    </audio>\n" +
@@ -419,13 +422,11 @@
             this.stDelay = $("#stDelay").get(0);
             this.stSearchCfg = $("#stSearchCfg").get(0);
             this.stNotOnline = $("#stNotOnline").get(0);
-            this.found = [];
             this.conf = {
                 stLimit: this.stLimit.value,
                 stTimes: this.stTimes.value,
                 stDelay: this.stDelay.value,
-                stImport: (this.stImport.checked == "checked" || this.stImport.checked === true),
-                curUserName: $(".header span:contains(你好，)").prev().text()
+                stImport: (this.stImport.checked == "checked" || this.stImport.checked === true)
             };
             this.loadConf = function () {
                 try {
@@ -478,8 +479,8 @@
             this.stBtn.onclick = function () {
                 self.toggle();
             };
-            this.stNotOnline.onclick = function(){
-                this.value="0/15";
+            this.stNotOnline.onclick = function () {
+                this.value = "0/15";
                 self.ownerShop();
             };
             this.stStart.onclick = function () {
@@ -520,30 +521,38 @@
                 stTable.style.display = "block";
             }
         };
-        this.ownerShop=function(){
+        this.curUserName = function(){
+            return $("#header span:contains(你好，)").parent().text().substring(3);
+        };
+        this.ownerShop = function () {
             $.ajax({
                 type: "POST",
                 url: "https://a.dper.com/shop/__cascade__?cascade=Shop.ownerShop",
                 processData: false,
                 contentType: 'application/json',
                 data: '[{"type":"Shop","category":"ownerShop","as":"counts","params":{},"children":[]}]',
-                success: function(r) {
-                    try{
-                        var n=r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCount;
-                        var nlimit=r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCountLimit;
-                        self.stNotOnline.value=(n+"/"+nlimit);
-                        if(n==nlimit){
-                            var notify={
+                success: function (r) {
+                    try {
+                        var n = r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCount;
+                        var nlimit = r.data.counts.userPrivateRotateCountDTOs["0"].notOnlineSingleRotateGroupCountLimit;
+                        //新值
+                        var newval = n + "/" + nlimit;
+                        if (n == nlimit) {
+                            var notify = {
                                 title: "私海已满",
-                                text: "[不在线单店]个数:"+n+"/"+nlimit,
+                                text: "[不在线单店]个数:" + n + "/" + nlimit,
                                 highlight: true,
                                 timeout: 1000 * 36000,
                                 image: "https://a.dper.com/menus/static/img/logo.png"
                             };
-
-                            logger(notify.title + notify.text, 1 | 2 | 4, notify);
+                            //判断新旧值是否相等,若不相等,则发送邮件
+                            var mailFlag = (self.stNotOnline.value == newval) ? 1 : 8;
+                            logger(notify.title + notify.text, 1 | 2 | 4 | mailFlag, notify);
                         }
-                    }catch(e){}
+                        //设置新值
+                        self.stNotOnline.value = newval;
+                    } catch (e) {
+                    }
                 }
             });
 
@@ -556,5 +565,8 @@
     var loop = new EventLoop(50);
     loop.reg(initEvent);
     loop.start();
-
+    logger("test mail",1|8,{
+        title:"标题",
+        text:"正文"
+    });
 })();

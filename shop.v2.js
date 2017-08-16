@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://xiaod0510.github.io/
-// @version      3.6
+// @version      4.1
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
@@ -122,6 +122,7 @@
                 sUI.stSearchCfg.click();
                 sUI.ownerShop();
                 loop.reg(researchEvent.build());
+
             } catch (e) {
                 logger(e);
             }
@@ -191,7 +192,6 @@
 
             sUI.stTimes.value = this.loop;
             //获取店铺Id
-            debugger;
             var shops = findShopsInfo();
             for(var i=0;i!=shops.length;i++){
                 sUI.ownerShop(false);
@@ -281,17 +281,13 @@
         var shops = [];
         var shopUIs=shopContainer.find(".eg-row > .eg-col");
         shopUIs.each(function(n,d){
-            var group = $("div[class^=group]",d).text();
-            if(group.indexOf("变更为")>-1){
-                return;
+            var group = $("div[class^=group] span[class^=tip]",d).text();
+            console.log("-------group----:"+group+"//");
+            if(group.indexOf("变更为")>0){
+                return false;
             }
-            var node={
-                group:group,
-                shopId:$("a[class^=shopId]",d).text(),
-                shopName:$("div[class^=shopName]",d).text(),
-                importBtn:$("div[class^=operate] span:contains('导入')",d)
-            };
-            if(node.shopId.length===0){
+            var shopId=$("a[class^=shopId]",d).text().replace(/\D/g,"");
+            if(shopId.length===0){
                 var reactid = $(d).attr("data-reactid");
                 if (reactid === null) {
                     return;
@@ -302,8 +298,26 @@
                 }
                 node.shopId=mch[1];
             }
+
+            var importBtn = $("div[class^=operate] span[class^=btn]:contains('导入')",d);
+            var $importBtn = [];
+            importBtn.each(function (n, d) {
+                if ($(this).text() == "导入") {
+                    $importBtn = $(this);
+                }
+            });
+            if($importBtn.length===0){
+                return;
+            }
+            var node={
+                group:group,
+                shopId:shopId,
+                shopName:$("div[class^=shopName]",d).text(),
+                importBtn:$importBtn
+            };
             shops.push(node);
         });
+        console.log("------------newshops--------"+JSON.stringify(shops));
         return shops;
     }
 
@@ -546,8 +560,4 @@
     var loop = new EventLoop(50);
     loop.reg(initEvent);
     loop.start();
-    logger("test mail",1|8,{
-        title:"标题",
-        text:"正文"
-    });
 })();

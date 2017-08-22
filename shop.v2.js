@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         shopAutoRef
 // @namespace    http://xiaod0510.github.io/
-// @version      4.1
+// @version      4.5
 // @description  try to take over the world!
 // @author       You
 // @match        https://a.dper.com/shops
@@ -16,6 +16,7 @@
     if (location.href.indexOf("cpublic") < 0) {
         return;
     }
+
     /**flag 1:console 2:title 4:notify 8:mail*/
     function logger(msg, flag, extInfo) {
         flag = flag || 3;
@@ -35,10 +36,7 @@
                     method: "GET",
                     url: "http://127.0.0.1:45678/mail.do?subject="+extInfo.title+"&body="+extInfo.text+"&toaddr="+addrs[i],
                     onload: function (response) {
-                        logger("邮件发送成功", 1 | 2 | 4);
-                    },
-                    onerror:function(response){
-                        logger("邮件服务未启用,发送失败!", 1 | 2 | 4);
+                        logger(response.responseText, 1 | 2 | 4);
                     }
                 });
             }
@@ -122,7 +120,6 @@
                 sUI.stSearchCfg.click();
                 sUI.ownerShop();
                 loop.reg(researchEvent.build());
-
             } catch (e) {
                 logger(e);
             }
@@ -141,8 +138,8 @@
             var curHour = now.getHours();
             var curDay = now.getDay();
             if (
-                curHour >= 22 || 
-                curHour <= 8 || 
+                //curHour >= 22 || 
+                //curHour <= 8 || 
                 curDay === 0
             ) {
                 logger("休息时间段");
@@ -189,17 +186,30 @@
             if (this.loop <= 1) {
                 loop.reg(delayEvent.build());
             }
+            logger("查找店铺信息");
 
             sUI.stTimes.value = this.loop;
             //获取店铺Id
-            var shops = findShopsInfo();
-            for(var i=0;i!=shops.length;i++){
-                sUI.ownerShop(false);
-                var s=shops[i];
-                var ime = importEvent.build(1, 1, [s]);
-                ime.cb();
+            var shops = findShopId();
+            //校验是否有新店铺
+            if (oldShops.length === 0) {
+                oldShops = shops;
+            } else {
+                var minus = shops.minus(oldShops);
+                if (minus.length !== 0) {
+                    logger("找到新店铺");
+                    if (sUI.conf.stImport) {
+                        for (var i = 0; i != minus.length; i++) {
+                            //直接点击导入
+                            var ime = importEvent.build(1, 1, [minus[i]]);
+                            ime.cb();
+                        }
+                    }
+                    oldShops = shops;
+                    loop.reg(this);
+                    return;
+                }
             }
-
             logger(this.desc + sUI.stTimes.value);
 
         },
@@ -219,22 +229,46 @@
         limit: 1,
         desc: "自动导入",
         cb: function () {
-            var shop = this.args[0];
-
-            shop.importBtn.click();
-            $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + shop.shopId + "&ist=20&sty=-1' >" + shop.shopId + " : " + shop.shopName + "</a></div>")
-                .appendTo($("#stPanel"));
-            var notify = {
-                title: "成功导入到[ " + sUI.curUserName() + " ]名下",
-                text: "店铺名:[" + shop.shopId + "]" + shop.shopName + ",不在线单店个数" + sUI.stNotOnline.value,
-                highlight: true,
-                timeout: 1000 * 36000,
-                image: "https://a.dper.com/menus/static/img/logo.png",
-                onclick: function () {
-                    window.open("https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1");
+            var shopId = this.args[0];
+            var baseSelector = "span[data-reactid*=" + shopId + "]";
+            var shopName = $(baseSelector).first().text();
+            if (shopName.length === 0) {
+                shopName = "unknow";
+            }
+            var importBtn = $(baseSelector + ":contains('导入')");
+            var $importBtn = [];
+            importBtn.each(function (n, d) {
+                if ($(this).text() == "导入") {
+                    $importBtn = $(this);
                 }
+            });
+            if ($importBtn.length === 0) {
+                return;
+            }
+            var assNewer = importBtn.parent().parent().last().prev();
+            if (assNewer.text().indexOf("变更为") > 0) {
+                return;
+            }
+            importBtn.click();
+            var info = {
+                id: shopId,
+                name: shopName
             };
-            logger(notify.title + notify.text, 1 | 2 | 4 | 8, notify);
+            if (info != null) {
+                $("<div class='stShopInfo'><a href='https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1' >" + info.id + " : " + info.name + "</a></div>")
+                    .appendTo($("#stPanel"));
+                var notify = {
+                    title: "成功导入到[ " + sUI.curUserName() + " ]名下",
+                    text: "店铺名:[" + info.id + "]" + info.name + ",不在线单店个数" + sUI.stNotOnline.value,
+                    highlight: true,
+                    timeout: 1000 * 36000,
+                    image: "https://a.dper.com/menus/static/img/logo.png",
+                    onclick: function () {
+                        window.open("https://a.dper.com/shop/view?shopId=" + info.id + "&ist=20&sty=-1");
+                    }
+                };
+                logger(notify.title + notify.text, 1 | 2 | 4 | 8, notify);
+            }
         },
         build: function (loop, limit, args) {
             var e = $.extend({}, this);
@@ -270,55 +304,30 @@
         }
     };
     /**
-     * 获取shopInfo
+     * 获取shopId
      * @returns {Array}
      */
-    var shopContainer=null;
-    function findShopsInfo() {
-        if(shopContainer===null||shopContainer.length===0){
-            shopContainer=$(".eg-paging-container").prev();
-        }
-        var shops = [];
-        var shopUIs=shopContainer.find(".eg-row > .eg-col");
-        shopUIs.each(function(n,d){
-            var group = $("div[class^=group] span[class^=tip]",d).text();
-            console.log("-------group----:"+group+"//");
-            if(group.indexOf("变更为")>0){
-                return false;
-            }
-            var shopId=$("a[class^=shopId]",d).text().replace(/\D/g,"");
-            if(shopId.length===0){
-                var reactid = $(d).attr("data-reactid");
-                if (reactid === null) {
-                    return;
-                }
-                var mch = /\$(\d+)\./.exec(reactid);
-                if (mch === null || mch.length != 2) {
-                    return;
-                }
-                node.shopId=mch[1];
-            }
+    var oldShops = [];
 
-            var importBtn = $("div[class^=operate] span[class^=btn]:contains('导入')",d);
-            var $importBtn = [];
-            importBtn.each(function (n, d) {
-                if ($(this).text() == "导入") {
-                    $importBtn = $(this);
-                }
-            });
-            if($importBtn.length===0){
+    function findShopId() {
+        var shops = {};
+        var spanShopLb = $("span:contains('导入')", "body > div:nth-child(6) > div > div.container___37ruD > div:nth-child(4)");
+        spanShopLb.each(function (n, d) {
+            var reactid = $(this).attr("data-reactid");
+            if (reactid === null) {
                 return;
             }
-            var node={
-                group:group,
-                shopId:shopId,
-                shopName:$("div[class^=shopName]",d).text(),
-                importBtn:$importBtn
-            };
-            shops.push(node);
+            var mch = /\$(\d+)\./.exec(reactid);
+            if (mch == null || mch.length != 2) {
+                return;
+            }
+            shops[mch[1] + ""] = 0;
         });
-        console.log("------------newshops--------"+JSON.stringify(shops));
-        return shops;
+        var result = [];
+        for (var s in shops) {
+            result.push(s);
+        }
+        return result;
     }
 
     //mock error
@@ -515,15 +524,11 @@
         this.curUserName = function(){
             return $("#header span:contains(你好，)").parent().text().substring(3);
         };
-        this.ownerShop = function (async) {
-            if(async===null){
-                async=true;
-            }
+        this.ownerShop = function () {
             $.ajax({
                 type: "POST",
                 url: "https://a.dper.com/shop/__cascade__?cascade=Shop.ownerShop",
                 processData: false,
-                async:async,
                 contentType: 'application/json',
                 data: '[{"type":"Shop","category":"ownerShop","as":"counts","params":{},"children":[]}]',
                 success: function (r) {
